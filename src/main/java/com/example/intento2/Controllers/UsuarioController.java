@@ -3,10 +3,11 @@ package com.example.intento2.Controllers;
 
 import com.example.intento2.dao.UsuarioDao;
 import com.example.intento2.models.Usuario;
+import com.example.intento2.utils.JWTUtil;
+import de.mkammerer.argon2.Argon2;
+import de.mkammerer.argon2.Argon2Factory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,46 +18,33 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioDao usuarioDao;
-    @RequestMapping(value="usuario/{id}")
-    public Usuario getUsuario(@PathVariable Long id){
 
-        Usuario usuario=new Usuario();
-        usuario.setId(id);
-        usuario.setNombre("Lucas");
-        usuario.setApellido("Ortiz");
-        usuario.setEmail("olwpad@gmail.com");
-        usuario.setTelefono("234234234");
-        return usuario ;
-    }
+    @Autowired
+    private JWTUtil jwtUtil;
 
-    @RequestMapping(value="usuarios")
-    public List<Usuario> getUsuarios(){
+    @RequestMapping(value = "api/usuarios", method = RequestMethod.GET)
+    public List<Usuario> getUsuarios(@RequestHeader(value="Authorization") String token) {
         return usuarioDao.getUsuarios();
     }
 
-
-    @RequestMapping(value="usuario3")
-    public Usuario editar(){
-
-        Usuario usuario=new Usuario();
-        usuario.setNombre("Lucas");
-        usuario.setApellido("Ortiz");
-        usuario.setEmail("olwpad@gmail.com");
-        usuario.setTelefono("234234234");
-
-        return usuario ;
+    private boolean validarToken(String token) {
+        String usuarioId = jwtUtil.getKey(token);
+        return usuarioId != null;
     }
 
+    @RequestMapping(value = "api/usuarios", method = RequestMethod.POST)
+    public void registrarUsuario(@RequestBody Usuario usuario) {
 
-    @RequestMapping(value="usuario4")
-    public Usuario eliminar(){
+        Argon2 argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id);
+        String hash = argon2.hash(1, 1024, 1, usuario.getPassword());
+        usuario.setPassword(hash);
 
-        Usuario usuario=new Usuario();
-        usuario.setNombre("Lucas");
-        usuario.setApellido("Ortiz");
-        usuario.setEmail("olwpad@gmail.com");
-        usuario.setTelefono("234234234");
-
-        return usuario ;
+        usuarioDao.registrar(usuario);
     }
+
+    @RequestMapping(value = "api/usuarios/{id}", method = RequestMethod.DELETE)
+    public void eliminar(@PathVariable Long id) {
+        usuarioDao.eliminar(id);
+    }
+
 }
